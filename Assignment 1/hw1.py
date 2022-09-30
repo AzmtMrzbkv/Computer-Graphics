@@ -8,16 +8,16 @@ CENTER_X, CENTER_Y = 600 // 2, 600 // 2
 
 
 # Create list of vertices for ellipse
-V = []
+ellipseVs = []
 dtheta, a, b = 1, 0.1, 0.05
 for i in range(45 // dtheta + 1):
     theta = i * dtheta
     r = (a * b) / np.sqrt((a * np.sin(theta)) ** 2 + (b * np.cos(theta)) ** 2)
     x, y = r * np.cos(theta), r * np.sin(theta)
-    V.append([x, y, 0])
-    V.append([-x, -y, 0])
-    V.append([-x, y, 0])
-    V.append([x, -y, 0])
+    ellipseVs.append([x, y, 0])
+    ellipseVs.append([-x, -y, 0])
+    ellipseVs.append([-x, y, 0])
+    ellipseVs.append([x, -y, 0])
 
 #########################################################################################
 
@@ -63,7 +63,7 @@ class Rectangle(Polygon):
 class Ellipse(Polygon):
     def __init__(self):
         super().__init__()
-        self.vertices = np.array(V, dtype = float)
+        self.vertices = np.array(ellipseVs, dtype = float)
 
     def draw(self):
         M = to_list(self.vertices)
@@ -74,7 +74,7 @@ class Ellipse(Polygon):
             glVertex3fv(M[i])
         glEnd()
 
-# convert np.array to python list to handle np.float128 error on Windows
+# convert np.array to python list to handle "np.float128 not found" error on Windows
 def to_list(M):
     R = []
     for i in range(M.shape[0]):
@@ -119,11 +119,11 @@ def translation(dx, dy):
 
 class Viewer:
     def __init__(self):
-        self.polygons = []
+        self.polygons = [] # list of all accumulated polygons
 
         self.key = b''
-        self.global_flag = True
-        self.ctrl_flag = False
+        self.global_flag = True # flag for differentiating the global and local manipulations
+        self.ctrl_flag = False # True while Ctrl key is pressed
 
         self.mouse_x = 0
         self.mouse_y = 0
@@ -138,6 +138,7 @@ class Viewer:
         # visualize your polygons here
 
         # TASK 5
+        # draw all polygons 
         for polygon in self.polygons:
             M = to_list(polygon.mat.T)
             glMultMatrixf(M)
@@ -153,7 +154,6 @@ class Viewer:
             print("shift pressed")
         if glutGetModifiers() & GLUT_ACTIVE_ALT:
             print("alt pressed")
-
         if glutGetModifiers() & GLUT_ACTIVE_CTRL:
             print("ctrl pressed")
         #     self.ctrl_flag = True
@@ -161,11 +161,13 @@ class Viewer:
         #     self.ctrl_flag = False
 
         # TASK 2
+        # store the last pressed key
         if key == b'\x1b': # ESC key
             self.key = b''
         elif key == b'1' or key == b'2' or key == b'3':
             self.key = key
         # TASK 4
+        # toggle between the global and local
         elif key == b'g':
             self.global_flag = not self.global_flag
             print(f"global_flag is {self.global_flag}")
@@ -177,6 +179,7 @@ class Viewer:
         print(f"special key event: key={key}, x={x}, y={y}")
 
         # TASK 4
+        # translation
         dx, dy = 10, 10
         T = np.eye(4)
 
@@ -202,6 +205,7 @@ class Viewer:
         self.mouse_x, self.mouse_y = x, y
 
         # TASK 2
+        # create and accumulate polygons with proper coordinates 
         if self.key == b'1':
             tr = Triangle()
             tr.mat[0][3], tr.mat[1][3] = convertXY(x, y)
@@ -227,17 +231,15 @@ class Viewer:
         print(f"mouse move event: x={x}, y={y}")
 
         # TASK 4
+        # scaling
         if glutGetModifiers() & GLUT_ACTIVE_CTRL:
             print("ctrl pressed")
             self.ctrl_flag = True
-        else:
-            self.ctrl_flag = False
 
         dx, dy = x - self.mouse_x, y - self.mouse_y
 
         TR = np.eye(4)
         if self.ctrl_flag: 
-            # scaling
             if dy == 0 and dx > 0:
                 TR = scale(1.1, 1)
             elif dy == 0 and dx < 0:
@@ -250,19 +252,23 @@ class Viewer:
         else:
             # rotate
             if (dx > 0 and dy == 0) or (dx == 0 and dy < 0): # counterclockwise
-                TR = rotation( -5 )
+                TR = rotation( -3 )
             elif (dx < 0 and dy == 0) or (dx == 0 and dy > 0): # clockwise
-                TR = rotation( 5 )
+                TR = rotation( 3 )
 
         for polygon in self.polygons:
             if self.global_flag:
+                # global transforamtion
                 polygon.mat = TR @ polygon.mat
             else:
                 for i in range(polygon.vertices.shape[0]):
+                    # local transforamtion
                     polygon.vertices[i] = (TR @ (np.append(polygon.vertices[i], 1).T)).T[:-1]
 
-
+        # save mouse coordinate to detect the directin of scrolling
         self.mouse_x, self.mouse_y = x, y
+
+        self.ctrl_flag = False
 
         glutPostRedisplay()
 
