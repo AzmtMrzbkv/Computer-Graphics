@@ -2,6 +2,24 @@ from OpenGL.GL import *
 from OpenGL.GLUT import *
 import numpy as np
 
+#########################################################################################
+
+CENTER_X, CENTER_Y = 600 // 2, 600 // 2
+
+
+# Create list of vertices for ellipse
+V = []
+dtheta, a, b = 1, 0.1, 0.05
+for i in range(45 // dtheta + 1):
+    theta = i * dtheta
+    r = (a * b) / np.sqrt((a * np.sin(theta)) ** 2 + (b * np.cos(theta)) ** 2)
+    x, y = r * np.cos(theta), r * np.sin(theta)
+    V.append([x, y, 0])
+    V.append([-x, -y, 0])
+    V.append([-x, y, 0])
+    V.append([x, -y, 0])
+
+#########################################################################################
 
 class Polygon:
     def __init__(self):
@@ -21,46 +39,39 @@ class Triangle(Polygon):
         M = to_list(self.vertices)
 
         glBegin(GL_TRIANGLES)
-        glColor3f(0, 0, 1.0)
-        glVertex3fv(M[0])
-        glColor3f(0, 0, 1.0)
-        glVertex3fv(M[1])
-        glColor3f(0, 0, 1.0)
-        glVertex3fv(M[2])
+        for i in range(3):
+            glColor3f(0, 0, 1.0)
+            glVertex3fv(M[i])
         glEnd()
 
 
 class Rectangle(Polygon):
     def __init__(self):
         super().__init__()
+        self.vertices = np.array([[-0.1, 0.1, 0], [0.1, 0.1, 0], [0.1, -0.1, 0], [-0.1, -0.1, 0]], dtype = float)
 
     def draw(self):
+        M = to_list(self.vertices)
+
         glBegin(GL_QUADS)
-        glColor3f(0, 0, 1.0)
-        glVertex3f(-0.1, 0.1, 0)
-        glColor3f(0, 0, 1.0)
-        glVertex3f(0.1, 0.1, 0)
-        glColor3f(0, 0, 1.0)
-        glVertex3f(0.1, -0.1, 0)
-        glColor3f(0, 0, 1.0)
-        glVertex3f(-0.1, -0.1, 0)
+        for i in range(4):
+            glColor3f(0, 0, 1.0)
+            glVertex3fv(M[i])
         glEnd()
 
 
 class Ellipse(Polygon):
     def __init__(self):
         super().__init__()
+        self.vertices = np.array(V, dtype = float)
 
     def draw(self):
+        M = to_list(self.vertices)
+
         glBegin(GL_TRIANGLE_FAN)
-        glColor3f(0, 0, 1.0)
-        glVertex3f(0.05, 0, 0)
-        glColor3f(0, 0, 1.0)
-        glVertex3f(0, 0.1, 0)
-        glColor3f(0, 0, 1.0)
-        glVertex3f(-0.05, 0, 0)
-        glColor3f(0, 0, 1.0)
-        glVertex3f(0, -0.1, 0)
+        for i in range(len(M)):
+            glColor3f(0, 0, 1.0)
+            glVertex3fv(M[i])
         glEnd()
 
 # convert np.array to python list to handle np.float128 error on Windows
@@ -74,10 +85,10 @@ def to_list(M):
     return R
 
 # TASK 2
-# convert from left-top coordinate to [-1,1] X [-1, 1] coordinate
-def convertXY(x, y, center_x = 400, center_y = 300):
-    nx = (x - center_x) / center_x
-    ny = (center_y - y) / center_y
+# convert from left-top coordinate to [-1, 1] X [-1, 1] coordinate
+def convertXY(x, y):
+    nx = (x - CENTER_X) / CENTER_X
+    ny = (CENTER_Y - y) / CENTER_Y
 
     return nx, ny
 
@@ -90,18 +101,18 @@ def scale(sx, sy):
 
 # TASK 3-2
 def rotation(degree):
-    degree = degree * np.pi / 180
+    rad = degree * np.pi / 180
 
     R = np.eye(4)
-    R[0][0], R[1][1] = np.cos(degree), np.cos(degree) 
-    R[0][1], R[1][0] = -np.sin(degree), np.sin(degree)
+    R[0][0], R[1][1] = np.cos(rad), np.cos(rad) 
+    R[0][1], R[1][0] = -np.sin(rad), np.sin(rad)
 
     return R
 
 # TASK 3-3
 def translation(dx, dy):
     T = np.eye(4)
-    T[1][3], T[2][3] = dx, dy
+    T[0][3], T[1][3] = dx / (2 * CENTER_X), dy / (2 * CENTER_Y)
 
     return T
 
@@ -109,8 +120,14 @@ def translation(dx, dy):
 class Viewer:
     def __init__(self):
         self.polygons = []
-        
+
         self.key = b''
+        self.global_flag = True
+        self.ctrl_flag = False
+
+        self.mouse_x = 0
+        self.mouse_y = 0
+
 
     def display(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -120,6 +137,7 @@ class Viewer:
 
         # visualize your polygons here
 
+        # TASK 5
         for polygon in self.polygons:
             M = to_list(polygon.mat.T)
             glMultMatrixf(M)
@@ -135,13 +153,22 @@ class Viewer:
             print("shift pressed")
         if glutGetModifiers() & GLUT_ACTIVE_ALT:
             print("alt pressed")
+
         if glutGetModifiers() & GLUT_ACTIVE_CTRL:
             print("ctrl pressed")
+        #     self.ctrl_flag = True
+        # else:
+        #     self.ctrl_flag = False
 
+        # TASK 2
         if key == b'\x1b': # ESC key
             self.key = b''
         elif key == b'1' or key == b'2' or key == b'3':
             self.key = key
+        # TASK 4
+        elif key == b'g':
+            self.global_flag = not self.global_flag
+            print(f"global_flag is {self.global_flag}")
     
         glutPostRedisplay()
 
@@ -149,12 +176,30 @@ class Viewer:
     def special(self, key, x, y):
         print(f"special key event: key={key}, x={x}, y={y}")
 
+        # TASK 4
+        dx, dy = 10, 10
+        T = np.eye(4)
+
+        if key == 100:
+            T = translation(-10, 0)
+        elif key == 101:
+            T = translation(0, 10)
+        elif key == 102:
+            T = translation(10, 0)
+        elif key == 103:
+            T = translation(0, -10)
+
+        for polygon in self.polygons:
+            polygon.mat = T @ polygon.mat
+
         glutPostRedisplay()
 
 
     def mouse(self, button, state, x, y):
         # button macros: GLUT_LEFT_BUTTON, GLUT_MIDDLE_BUTTON, GLUT_RIGHT_BUTTON
         print(f"mouse press event: button={button}, state={state}, x={x}, y={y}")
+
+        self.mouse_x, self.mouse_y = x, y
 
         # TASK 2
         if self.key == b'1':
@@ -181,13 +226,51 @@ class Viewer:
     def motion(self, x, y):
         print(f"mouse move event: x={x}, y={y}")
 
+        # TASK 4
+        if glutGetModifiers() & GLUT_ACTIVE_CTRL:
+            print("ctrl pressed")
+            self.ctrl_flag = True
+        else:
+            self.ctrl_flag = False
+
+        dx, dy = x - self.mouse_x, y - self.mouse_y
+
+        TR = np.eye(4)
+        if self.ctrl_flag: 
+            # scaling
+            if dy == 0 and dx > 0:
+                TR = scale(1.1, 1)
+            elif dy == 0 and dx < 0:
+                TR = scale(0.9, 1)
+            elif dx == 0 and dy > 0:
+                TR = scale(1, 0.9)
+            elif dx == 0 and dy < 0:
+                TR = scale(1, 1.1) 
+
+        else:
+            # rotate
+            if (dx > 0 and dy == 0) or (dx == 0 and dy < 0): # counterclockwise
+                TR = rotation( -5 )
+            elif (dx < 0 and dy == 0) or (dx == 0 and dy > 0): # clockwise
+                TR = rotation( 5 )
+
+        for polygon in self.polygons:
+            if self.global_flag:
+                polygon.mat = TR @ polygon.mat
+            else:
+                for i in range(polygon.vertices.shape[0]):
+                    polygon.vertices[i] = (TR @ (np.append(polygon.vertices[i], 1).T)).T[:-1]
+
+
+        self.mouse_x, self.mouse_y = x, y
+
         glutPostRedisplay()
 
 
     def run(self):
         glutInit()
         glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH)
-        glutInitWindowSize(800, 600)
+        glutInitWindowSize(2 * CENTER_X, 2 * CENTER_Y)
         glutInitWindowPosition(0, 0)
         glutCreateWindow(b"CS471 Computer Graphics #1")
 
