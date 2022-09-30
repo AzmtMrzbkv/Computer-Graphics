@@ -6,26 +6,27 @@ import numpy as np
 class Polygon:
     def __init__(self):
         self.mat = np.eye(4)
-        self.x = 0
-        self.y = 0
 
     def draw(self):
         raise NotImplementedError
 
-
+# TASK 1
 # define your polygons here
 class Triangle(Polygon):
     def __init__(self):
         super().__init__()
+        self.vertices = np.array([[0, 0.1, 0], [-0.1, -0.1, 0], [0.1, -0.1, 0]], dtype = float)
 
     def draw(self):
+        M = to_list(self.vertices)
+
         glBegin(GL_TRIANGLES)
         glColor3f(0, 0, 1.0)
-        glVertex3f(0, 0.1, 0)
+        glVertex3fv(M[0])
         glColor3f(0, 0, 1.0)
-        glVertex3f(-0.1, -0.1, 0)
+        glVertex3fv(M[1])
         glColor3f(0, 0, 1.0)
-        glVertex3f(0.1, -0.1, 0)
+        glVertex3fv(M[2])
         glEnd()
 
 
@@ -62,22 +63,54 @@ class Ellipse(Polygon):
         glVertex3f(0, -0.1, 0)
         glEnd()
 
+# convert np.array to python list to handle np.float128 error on Windows
+def to_list(M):
+    R = []
+    for i in range(M.shape[0]):
+        T = []
+        for j in range(M.shape[1]):
+            T.append(M[i][j])
+        R.append(T)
+    return R
+
+# TASK 2
+# convert from left-top coordinate to [-1,1] X [-1, 1] coordinate
+def convertXY(x, y, center_x = 400, center_y = 300):
+    nx = (x - center_x) / center_x
+    ny = (center_y - y) / center_y
+
+    return nx, ny
+
+# TASK 3-1
+def scale(sx, sy):
+    S = np.eye(4)
+    S[0][0], S[1][1] = sx, sy
+
+    return S
+
+# TASK 3-2
+def rotation(degree):
+    degree = degree * np.pi / 180
+
+    R = np.eye(4)
+    R[0][0], R[1][1] = np.cos(degree), np.cos(degree) 
+    R[0][1], R[1][0] = -np.sin(degree), np.sin(degree)
+
+    return R
+
+# TASK 3-3
+def translation(dx, dy):
+    T = np.eye(4)
+    T[1][3], T[2][3] = dx, dy
+
+    return T
+
 
 class Viewer:
     def __init__(self):
         self.polygons = []
         
         self.key = b''
-
-        self.center_x= 800 / 2
-        self.center_y = 600 / 2 
-
-    def convertXY(self, x, y):
-        nx = (x - self.center_x) / self.center_x
-        ny = (self.center_y - y) / self.center_y
-
-        return nx, ny
-
 
     def display(self):
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -88,12 +121,10 @@ class Viewer:
         # visualize your polygons here
 
         for polygon in self.polygons:
-            # glPushMatrix()
-            # glTranslatef(dx, dy, 0)
-            glMultMatrixf(polygon.mat.T)
+            M = to_list(polygon.mat.T)
+            glMultMatrixf(M)
             polygon.draw()
             glLoadIdentity()
-            # glPopMatrix()
 
         glutSwapBuffers()
 
@@ -125,21 +156,22 @@ class Viewer:
         # button macros: GLUT_LEFT_BUTTON, GLUT_MIDDLE_BUTTON, GLUT_RIGHT_BUTTON
         print(f"mouse press event: button={button}, state={state}, x={x}, y={y}")
 
+        # TASK 2
         if self.key == b'1':
             tr = Triangle()
-            tr.mat[0][3], tr.mat[1][3] = self.convertXY(x, y)
+            tr.mat[0][3], tr.mat[1][3] = convertXY(x, y)
             
             self.polygons.append(tr)
     
         elif self.key == b'2':
             rec = Rectangle()
-            rec.mat[0][3], rec.mat[1][3] = self.convertXY(x, y)
+            rec.mat[0][3], rec.mat[1][3] = convertXY(x, y)
 
             self.polygons.append(rec)
 
         elif self.key == b'3':
             ell = Ellipse()
-            ell.mat[0][3], ell.mat[1][3] = self.convertXY(x, y)
+            ell.mat[0][3], ell.mat[1][3] = convertXY(x, y)
 
             self.polygons.append(ell)
 
