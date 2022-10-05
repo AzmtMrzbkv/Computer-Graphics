@@ -1,10 +1,17 @@
+'''
+Myrzabekov Azamat
+20192022
+
+Implemented strictly by assignment instructions thus I did not include manual.
+'''
+
 from OpenGL.GL import *
 from OpenGL.GLUT import *
 import numpy as np
 
 #########################################################################################
 
-CENTER_X, CENTER_Y = 600 // 2, 600 // 2
+CENTER_X, CENTER_Y = 800 // 2, 800 // 2
 
 
 # Create list of vertices for ellipse
@@ -261,9 +268,8 @@ class Viewer:
                 # global transforamtion
                 polygon.mat = TR @ polygon.mat
             else:
-                for i in range(polygon.vertices.shape[0]):
-                    # local transforamtion
-                    polygon.vertices[i] = (TR @ (np.append(polygon.vertices[i], 1).T)).T[:-1]
+                # local transforamtion
+                polygon.mat = polygon.mat @ TR
 
         # save mouse coordinate to detect the directin of scrolling
         self.mouse_x, self.mouse_y = x, y
