@@ -1,3 +1,10 @@
+'''
+Name: Myrzabekov Azamat
+ID: 20192022
+
+I strictly followed the assignmnet instruction, thus, I did not included separate manual
+'''
+
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
@@ -152,14 +159,13 @@ class Viewer:
         if self.FoV == 0:
             glOrtho(-1, 1, -1, 1, -100, 100)
         else:
-            # zNear = 1 / (2 * np.tan((self.FoV / 2) * (np.pi / 180)))
-            gluPerspective(self.FoV, self.screen_width / self.screen_height, 1.0, 10000.0)
+            # zNear = self.screen_height / (2 * np.tan((self.FoV / 2) * (np.pi / 180)))
+            gluPerspective(self.FoV, self.screen_width / self.screen_height, 0.001, 1)
 
         glMatrixMode(GL_MODELVIEW)
         glLoadIdentity()
 
         # do some transformations using camera view
-        # glMultMatrixf(to_list(self.Trans.T))
         glMultMatrixf(to_list(self.Trans.T))
         glutSolidTeapot(0.5)
         
@@ -258,7 +264,6 @@ class Viewer:
             self.Trans =  self.Trans @ get_Track_R(p1, p2)
 
         elif self.mouse_button == 2:
-            # self.T = translation(x - self.mouse_x, y - self.mouse_y, self.screen_width, self.screen_height) @ self.T
             self.Trans = translation(x - self.mouse_x, y - self.mouse_y, self.screen_width, self.screen_height) @ self.Trans
 
         self.mouse_x, self.mouse_y = x, y
@@ -270,8 +275,8 @@ class Viewer:
         print(f"window size: {w} x {h}")
 
         # TODO adjust necessary changes to projection and ratio
-        self.Trans = self.Trans @ scale(1, -1, 1)
 
+        # change screen size and trackball radius
         self.screen_width, self.screen_height = w, h
         self.radius = min(self.screen_width, self.screen_height)
 
